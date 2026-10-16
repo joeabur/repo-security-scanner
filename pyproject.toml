@@ -33,7 +33,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=2.4.0",
     "jsonschema>=4.22",
-    "pip-audit>=2.7",
+    "pip-audit>=2.10.1",
     "pyyaml>=6.0.3",
 ]
 
