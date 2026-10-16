@@ -1,0 +1,53 @@
+# CODEOWNERS: who must review changes to security-critical paths.
+#
+# This file only has an effect once branch protection for `main` has
+# "Require review from Code Owners" turned on (Settings -> Branches).
+# Later matching patterns take precedence over earlier ones, so the
+# specific rules below the catch-all win.
+#
+# With a single owner, GitHub does not let an author approve their own pull
+# request: either add a second owner/team here, or allow the owner to bypass
+# the rule. Replace or extend @joeabur with a team (for example @org/security)
+# when more people maintain this repository.
+
+# Default: everything needs the maintainer's review.
+*                                   @joeabur
+
+# CI/CD: workflows hold the repository's permissions and pinned action SHAs.
+/.github/                           @joeabur
+
+# What decides pass/fail and what a repository may suppress: presets, bundled
+# scanner configuration and rule packs.
+/policies/                          @joeabur
+/src/reposcan/data/                 @joeabur
+/examples/configs/                  @joeabur
+
+# Baselines are allow-lists. Anyone who can edit one can hide a finding, so any
+# baseline or suppression file added to this repository needs an owner's review.
+**/reposcan-baseline.json           @joeabur
+/ci/                                @joeabur
+
+# Security-critical code: subprocess boundary, redaction, path handling, policy,
+# baseline matching, scanner adapters and report writers.
+/src/reposcan/runner.py             @joeabur
+/src/reposcan/redaction.py          @joeabur
+/src/reposcan/paths.py              @joeabur
+/src/reposcan/policy.py             @joeabur
+/src/reposcan/baseline.py           @joeabur
+/src/reposcan/config.py             @joeabur
+/src/reposcan/adapters/             @joeabur
+/src/reposcan/reporting/            @joeabur
+
+# Dependency pins and lockfile (supply chain).
+/pyproject.toml                     @joeabur
+/uv.lock                            @joeabur
+
+# Security documentation and the threat model.
+/SECURITY.md                        @joeabur
+/docs/security-and-limitations.md   @joeabur
+/docs/threat-model.md               @joeabur
+
+# Fixtures carry the real captured scanner output that the adapters are tested against.
+/tests/fixtures/                    @joeabur
+/sample-data/                       @joeabur
+/scripts/capture_fixtures.py        @joeabur
