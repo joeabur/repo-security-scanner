@@ -48,6 +48,13 @@ See "Upgrading scanners" in `docs/user-guide.md`. In short: install the new vers
 `pytest -m integration` and `python scripts/capture_fixtures.py`, review the fixture diff, then widen
 the adapter's `supported` range and update `tested`.
 
+## Branch protection
+
+`main` is protected: changes land through pull requests, the CI checks (`lint-and-test`, `integration`,
+`dependency-audit`, `workflow-hygiene` and `secrets-and-sast`) must pass, force-pushes and branch deletion are
+blocked, and `.github/CODEOWNERS` names the reviewers for security-critical paths. Do not rewrite `main`'s
+history.
+
 ## Commit and review
 
 Small, focused commits with a message that says *why*. Security-relevant changes need a second review.
