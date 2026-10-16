@@ -66,7 +66,7 @@ with `-v` (debug logging; secrets are redacted) and open `reposcan-report.json` 
 | Symptom | Fix |
 |---|---|
 | `reposcan: command not found` | Activate the venv or add `.venv/bin` to `PATH` (`echo "$PWD/.venv/bin" >> "$GITHUB_PATH"`). |
-| SARIF upload fails with "Resource not accessible by integration" | Add `security-events: write` to that job; forks never get it. |
+| SARIF upload fails with "Resource not accessible by integration" | Add `security-events: write` to that job, and `actions: read` on private repositories (the action looks up the workflow run; observed failing without it). Forks and Dependabot never get write access. |
 | Annotations missing on fork PRs | GitHub limits fork workflows; the exit code still gates the check. |
 | `check_workflows.py` reports an unpinned action | Replace `@v4` with the full commit SHA and keep the tag in a trailing comment; Dependabot (`.github/dependabot.yml`) can update both. |
 | Job passes locally but fails in CI with exit 3 | Different scanner versions. Pin them (`semgrep==…`, `go install …@vX`) and compare `reposcan doctor` output. |
