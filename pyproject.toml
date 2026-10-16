@@ -34,7 +34,7 @@ dev = [
     "mypy>=1.11",
     "jsonschema>=4.22",
     "pip-audit>=2.7",
-    "pyyaml>=6.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.scripts]
