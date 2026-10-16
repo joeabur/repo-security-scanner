@@ -297,6 +297,25 @@ def test_workflow_hygiene_checker_catches_problems(tmp_path: Path) -> None:
 # ---- report schema, fixtures and diagrams -----------------------------------------------------------
 
 
+def unwrap_single_allof(node: object) -> object:
+    """Normalise ``{"allOf": [{"$ref": X}], ...}`` to ``{"$ref": X, ...}`` so Pydantic versions compare equal."""
+    if isinstance(node, list):
+        return [unwrap_single_allof(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+    out = {k: unwrap_single_allof(v) for k, v in node.items()}
+    wrapped = out.get("allOf")
+    if (
+        isinstance(wrapped, list)
+        and len(wrapped) == 1
+        and isinstance(wrapped[0], dict)
+        and "$ref" in wrapped[0]
+    ):
+        del out["allOf"]
+        out.update(wrapped[0])
+    return out
+
+
 def test_committed_report_schema_is_current_and_validates_a_report() -> None:
     schema = json.loads((REPO_ROOT / "docs" / "report-schema.json").read_text(encoding="utf-8"))
     from reposcan.schemas import ScanResult as Model
@@ -304,7 +323,10 @@ def test_committed_report_schema_is_current_and_validates_a_report() -> None:
     expected = Model.model_json_schema()
     expected["$schema"] = "https://json-schema.org/draft/2020-12/schema"
     expected["title"] = "reposcan JSON report"
-    assert schema == expected, "run: python scripts/generate_schema.py"
+    # Older Pydantic wraps a defaulted "$ref" in a one-element "allOf"; that is the same schema.
+    assert unwrap_single_allof(schema) == unwrap_single_allof(expected), (
+        "run: python scripts/generate_schema.py"
+    )
     sample = result([finding("r"), dep_finding()])
     jsonschema.Draft202012Validator(schema).validate(json.loads(sample.model_dump_json()))
 
