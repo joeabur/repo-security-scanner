@@ -45,7 +45,7 @@ jobs:
       - name: Report schema is up to date
         run: uv run --frozen python scripts/generate_schema.py --check
       - name: Unit tests, documentation checks and coverage
-        run: uv run --frozen pytest --cov=reposcan --cov-report=term-missing --cov-fail-under=85
+        run: uv run --frozen pytest --cov=reposcan --cov-report=term-missing --cov-fail-under=90
 
   unit-macos:
     # The tool targets POSIX; this proves the unit suite (process groups, O_NOFOLLOW, atomic writes,

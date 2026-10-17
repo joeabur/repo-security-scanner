@@ -123,9 +123,32 @@ def _print_summary(result: ScanResult, written: list[Path]) -> None:
     _echo(f"result: {result.exit_reason} (exit {result.exit_code})")
 
 
+def platform_supported(platform: str | None = None) -> bool:
+    """reposcan relies on POSIX process groups, O_NOFOLLOW and atomic renames; Windows is unsupported."""
+    return not (platform or sys.platform).lower().startswith(("win", "cygwin"))
+
+
+def _print_version(value: bool) -> None:
+    if value:
+        typer.echo(f"reposcan {__version__}")
+        raise typer.Exit()
+
+
 @app.callback()
-def _root() -> None:
+def _root(
+    _version: Annotated[
+        bool,
+        typer.Option("--version", callback=_print_version, is_eager=True, help="Print the version and exit."),
+    ] = False,
+) -> None:
     """reposcan - repository security scan orchestrator."""
+    if not platform_supported():
+        _echo(
+            "error: this platform is not supported (reposcan needs POSIX process groups and symlink-safe "
+            "file access). Use Linux or macOS, or run it in a container or WSL.",
+            err=True,
+        )
+        raise typer.Exit(int(ExitCode.CONFIG_ERROR))
 
 
 @app.command()

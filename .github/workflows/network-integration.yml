@@ -44,6 +44,14 @@ jobs:
           echo "${PWD}/.venv/bin" >> "${GITHUB_PATH}"
       - name: Scanner versions
         run: reposcan doctor --all
+      - name: Dogfood - the project's own lockfile (Trivy and OSV-Scanner, api mode)
+        run: |
+          printf '[scanners.osv]\nenabled = true\nmode = "api"\n' > "${RUNNER_TEMP}/osv-api.toml"
+          reposcan scan uv.lock --scanners trivy --fail-on high --output-dir "${RUNNER_TEMP}/dogfood-trivy"
+          reposcan scan uv.lock --scanners osv-scanner --config "${RUNNER_TEMP}/osv-api.toml" \
+            --fail-on high --output-dir "${RUNNER_TEMP}/dogfood-osv"
+      - name: Dogfood - the project's own Dockerfile (Trivy misconfiguration)
+        run: reposcan scan Dockerfile --scanners trivy --fail-on medium --output-dir "${RUNNER_TEMP}/dogfood-docker"
       - name: Integration tests (network, all scanners)
         env:
           REPOSCAN_ITEST_NETWORK: "1"

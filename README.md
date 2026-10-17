@@ -59,6 +59,7 @@ scripts/cleanup.sh
 | [Troubleshooting](docs/troubleshooting.md) | Symptoms and fixes by exit code |
 | [Repository settings](docs/repository-settings.md) | Branch ruleset, required checks, release environment and security features that must be enabled in GitHub (not stored in the repo) |
 | [Security and limitations](docs/security-and-limitations.md) | Controls and where they are tested, baseline risks, isolation options, known limits |
+| [Bundled Semgrep rules](docs/semgrep-rules.md) | Generated list of the 25 shipped rules and how they are tested |
 | [Examples](docs/examples.md) | Configs, GitHub Actions, GitLab CI, scripting, containers |
 | [Threat model](docs/threat-model.md) | Assets, actors, trust boundaries, threats and mitigations |
 | [Report JSON schema](docs/report-schema.json) | Machine-readable schema of the JSON report |
@@ -139,7 +140,7 @@ Not part of the numbers above: the CI workflows themselves have not run (see
 Details in [Security and limitations](docs/security-and-limitations.md). The important ones:
 
 - A clean report is evidence, not proof; coverage is whatever the scanners provide.
-- The **bundled Semgrep rules are a small, Python-only demonstration set.** Bring your own rules.
+- The **bundled Semgrep rules are a small demonstration set** (25 rules for Python, JS/TS, Go and Java; see [the rule list](docs/semgrep-rules.md)). Bring your own rules for real coverage.
 - Redaction is pattern-based; treat reports as sensitive anyway.
 - Vulnerability data is only as fresh as the databases you updated. Reports record when Trivy's database was
   last updated, offline scans on an old one warn, and `[scan] max_db_age_days` can fail them closed. OSV-Scanner's

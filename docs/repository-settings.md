@@ -83,3 +83,10 @@ does not count an author's own approval, so the sole owner cannot merge their ow
 3. Try `git push --force origin main` and `git push origin --delete main` from the same account (against a
    scratch fork if you prefer) and confirm both are rejected.
 4. Re-run the quick check (`"protected": true`) after any change to the ruleset.
+
+## Further recommendations
+
+- **CodeQL / code scanning**: enable GitHub's default CodeQL setup for Python and Actions as an
+  independent second opinion alongside reposcan's own self-scan. This is a repository setting and is not stored here.
+- **Release provenance**: when the first real tag is cut, consider build-provenance attestations for the
+  published artifacts. `release.yml` has not yet been run on a real tag.

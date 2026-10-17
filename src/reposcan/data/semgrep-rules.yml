@@ -1,5 +1,10 @@
-# Local, offline Semgrep rules shipped with reposcan. Remote registry rules are
-# refused by default because fetching them transmits metadata to semgrep.dev.
+# Local, offline Semgrep rules shipped with reposcan (original work, MIT). Remote registry rules are refused by
+# default because fetching them transmits metadata to semgrep.dev.
+#
+# Every rule is covered by annotated test files in tests/semgrep/ (`ruleid:` = must match, `ok:` = must not).
+# Run them with `pytest -m integration -k bundled_semgrep` or `semgrep --test` (see docs/semgrep-rules.md).
+# This is a small high-precision baseline for Python, JavaScript/TypeScript, Go and Java, not a complete SAST
+# ruleset: add your own rules via [scanners.semgrep] rules in the reposcan config.
 rules:
   - id: reposcan.python.sql-string-concat
     languages: [python]
@@ -51,9 +56,229 @@ rules:
   - id: reposcan.python.yaml-unsafe-load
     languages: [python]
     severity: ERROR
-    message: yaml.load without a safe Loader can construct arbitrary objects.
+    message: yaml.load without a safe Loader can construct arbitrary objects; use yaml.safe_load.
     metadata:
       cwe: ["CWE-502: Deserialization of Untrusted Data"]
       category: security
-    patterns:
+    pattern-either:
       - pattern: yaml.load($X)
+      - pattern: yaml.load($X, Loader=yaml.Loader)
+      - pattern: yaml.load($X, Loader=yaml.UnsafeLoader)
+      - pattern: yaml.load($X, yaml.Loader)
+      - pattern: yaml.load($X, yaml.UnsafeLoader)
+  - id: reposcan.python.pickle-load
+    languages: [python]
+    severity: ERROR
+    message: pickle can execute arbitrary code while loading; never unpickle untrusted data.
+    metadata:
+      cwe: ["CWE-502: Deserialization of Untrusted Data"]
+      category: security
+    pattern-either:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+  - id: reposcan.python.exec-call
+    languages: [python]
+    severity: ERROR
+    message: exec() on dynamic input can execute arbitrary code.
+    metadata:
+      cwe: ["CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"]
+      category: security
+    patterns:
+      - pattern: exec($X)
+      - pattern-not: exec("...")
+  - id: reposcan.python.os-system
+    languages: [python]
+    severity: ERROR
+    message: os.system() runs a shell command; pass an argument list to subprocess.run instead.
+    metadata:
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"]
+      category: security
+    patterns:
+      - pattern: os.system($X)
+      - pattern-not: os.system("...")
+  - id: reposcan.python.requests-verify-false
+    languages: [python]
+    severity: ERROR
+    message: TLS certificate verification is disabled (verify=False).
+    metadata:
+      cwe: ["CWE-295: Improper Certificate Validation"]
+      category: security
+    pattern-either:
+      - pattern: requests.$FUNC(..., verify=False, ...)
+      - pattern: httpx.$FUNC(..., verify=False, ...)
+  - id: reposcan.python.ssl-unverified-context
+    languages: [python]
+    severity: ERROR
+    message: An SSL context without certificate verification accepts any server certificate.
+    metadata:
+      cwe: ["CWE-295: Improper Certificate Validation"]
+      category: security
+    pattern-either:
+      - pattern: ssl._create_unverified_context(...)
+      - pattern: $CTX.verify_mode = ssl.CERT_NONE
+  - id: reposcan.python.tempfile-mktemp
+    languages: [python]
+    severity: WARNING
+    message: tempfile.mktemp() is race-prone; use tempfile.mkstemp() or NamedTemporaryFile().
+    metadata:
+      cwe: ["CWE-377: Insecure Temporary File"]
+      category: security
+    pattern: tempfile.mktemp(...)
+  - id: reposcan.python.flask-debug-enabled
+    languages: [python]
+    severity: WARNING
+    message: Running with debug=True exposes an interactive debugger; never enable it in production.
+    metadata:
+      cwe: ["CWE-489: Active Debug Code"]
+      category: security
+    pattern: $APP.run(..., debug=True, ...)
+  - id: reposcan.js.eval-call
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: eval() on dynamic input can execute arbitrary code.
+    metadata:
+      cwe: ["CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"]
+      category: security
+    patterns:
+      - pattern: eval($X)
+      - pattern-not: eval("...")
+  - id: reposcan.js.new-function
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: new Function() compiles a string to code at runtime and is equivalent to eval().
+    metadata:
+      cwe: ["CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"]
+      category: security
+    patterns:
+      - pattern: new Function($X)
+      - pattern-not: new Function("...")
+  - id: reposcan.js.child-process-command-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: A shell command is built from dynamic strings; use execFile/spawn with an argument array.
+    metadata:
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"]
+      category: security
+    pattern-either:
+      - pattern: child_process.exec($X + ...)
+      - pattern: child_process.execSync($X + ...)
+      - pattern: child_process.exec(`...${$Y}...`)
+      - pattern: child_process.execSync(`...${$Y}...`)
+      - pattern: exec($X + ...)
+      - pattern: execSync($X + ...)
+      - pattern: exec(`...${$Y}...`)
+      - pattern: execSync(`...${$Y}...`)
+  - id: reposcan.js.html-injection-sink
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: Assigning dynamic strings to innerHTML/outerHTML or document.write enables cross-site scripting.
+    metadata:
+      cwe: ["CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"]
+      category: security
+    patterns:
+      - pattern-either:
+          - pattern: $EL.innerHTML = $X
+          - pattern: $EL.outerHTML = $X
+          - pattern: document.write($X)
+      - pattern-not: $EL.innerHTML = "..."
+      - pattern-not: $EL.outerHTML = "..."
+      - pattern-not: document.write("...")
+  - id: reposcan.js.tls-verification-disabled
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: TLS certificate verification is disabled.
+    metadata:
+      cwe: ["CWE-295: Improper Certificate Validation"]
+      category: security
+    pattern-either:
+      - pattern: "{..., rejectUnauthorized: false, ...}"
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+  - id: reposcan.js.weak-hash
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: MD5 and SHA-1 are broken for security purposes; use SHA-256 or better.
+    metadata:
+      cwe: ["CWE-327: Use of a Broken or Risky Cryptographic Algorithm"]
+      category: security
+    pattern-either:
+      - pattern: crypto.createHash("md5")
+      - pattern: crypto.createHash("sha1")
+  - id: reposcan.go.insecure-skip-verify
+    languages: [go]
+    severity: ERROR
+    message: InsecureSkipVerify disables TLS certificate verification.
+    metadata:
+      cwe: ["CWE-295: Improper Certificate Validation"]
+      category: security
+    pattern: "tls.Config{..., InsecureSkipVerify: true, ...}"
+  - id: reposcan.go.exec-shell-command
+    languages: [go]
+    severity: ERROR
+    message: A shell is invoked with a dynamic command string; call the program directly with separate arguments.
+    metadata:
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"]
+      category: security
+    patterns:
+      - pattern: exec.Command($SH, "-c", $CMD)
+      - metavariable-regex:
+          metavariable: $SH
+          regex: ^"(/bin/)?(ba)?sh"$
+      - pattern-not: exec.Command($SH, "-c", "...")
+  - id: reposcan.go.weak-hash
+    languages: [go]
+    severity: WARNING
+    message: MD5 and SHA-1 are broken for security purposes; use SHA-256 or better.
+    metadata:
+      cwe: ["CWE-327: Use of a Broken or Risky Cryptographic Algorithm"]
+      category: security
+    pattern-either:
+      - pattern: md5.New()
+      - pattern: md5.Sum(...)
+      - pattern: sha1.New()
+      - pattern: sha1.Sum(...)
+  - id: reposcan.go.sql-string-building
+    languages: [go]
+    severity: ERROR
+    message: SQL is built by string concatenation or Sprintf; use placeholders and arguments.
+    metadata:
+      cwe: ["CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"]
+      category: security
+    pattern-either:
+      - pattern: $DB.Query($X + ...)
+      - pattern: $DB.QueryRow($X + ...)
+      - pattern: $DB.Exec($X + ...)
+      - pattern: $DB.Query(fmt.Sprintf(...))
+      - pattern: $DB.QueryRow(fmt.Sprintf(...))
+      - pattern: $DB.Exec(fmt.Sprintf(...))
+  - id: reposcan.java.weak-digest
+    languages: [java]
+    severity: WARNING
+    message: MD5 and SHA-1 are broken for security purposes; use SHA-256 or better.
+    metadata:
+      cwe: ["CWE-327: Use of a Broken or Risky Cryptographic Algorithm"]
+      category: security
+    pattern-either:
+      - pattern: MessageDigest.getInstance("MD5")
+      - pattern: MessageDigest.getInstance("SHA-1")
+      - pattern: MessageDigest.getInstance("SHA1")
+  - id: reposcan.java.runtime-exec
+    languages: [java]
+    severity: ERROR
+    message: Runtime.exec() with a dynamic command string enables command injection; use ProcessBuilder with an argument list.
+    metadata:
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"]
+      category: security
+    patterns:
+      - pattern: Runtime.getRuntime().exec($X)
+      - pattern-not: Runtime.getRuntime().exec("...")
+  - id: reposcan.java.sql-concatenation
+    languages: [java]
+    severity: ERROR
+    message: SQL is built by string concatenation; use PreparedStatement with parameters.
+    metadata:
+      cwe: ["CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"]
+      category: security
+    pattern-either:
+      - pattern: $S.executeQuery($X + ...)
+      - pattern: $S.executeUpdate($X + ...)
+      - pattern: $S.execute($X + ...)

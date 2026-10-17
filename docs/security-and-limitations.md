@@ -97,8 +97,8 @@ therefore **not published to PyPI**, and its distribution is named `reposcan-orc
 **Coverage**
 
 - reposcan finds only what the scanners find. A clean report is evidence, not proof.
-- The bundled Semgrep rule pack is **small and Python-only** (SQL concatenation, `shell=True`, `eval`,
-  weak hashes, unsafe `yaml.load`). It exists so the tool and demo work offline. Bring your own rules
+- The bundled Semgrep rule pack is **small** (25 rules across Python, JS/TS, Go and Java; see
+  [semgrep-rules.md](semgrep-rules.md)). It exists so the tool and demo work offline. Bring your own rules
   (`[scanners.semgrep] rules`) for real coverage, or consciously enable registry rules.
 - Gitleaks `dir` mode scans the working tree only; use `--history` for commits (and note it replaces the
   working-tree scan). Binary, very large (>64 MiB report) and archive contents follow each scanner's defaults.

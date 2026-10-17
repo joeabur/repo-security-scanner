@@ -7,7 +7,8 @@ name = "reposcan-orchestrator"
 version = "0.1.0"
 description = "Security scanner orchestrator: Gitleaks, Semgrep, Trivy and OSV-Scanner with unified findings, baselines and CI policies."
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "reposcan contributors" }]
 keywords = ["security", "sast", "secrets", "sarif", "devsecops"]
@@ -15,7 +16,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Topic :: Security",
     "Typing :: Typed",
@@ -25,6 +25,12 @@ dependencies = [
     "typer>=0.27.3,<1",
     "packaging>=24.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/joeabur/repo-security-scanner"
+Repository = "https://github.com/joeabur/repo-security-scanner"
+Issues = "https://github.com/joeabur/repo-security-scanner/issues"
+Security = "https://github.com/joeabur/repo-security-scanner/blob/main/SECURITY.md"
 
 [project.optional-dependencies]
 dev = [
@@ -51,8 +57,8 @@ markers = [
 ]
 
 [tool.ruff]
-# sample-data holds intentionally insecure code; fixtures are captured tool output.
-extend-exclude = ["sample-data", "tests/fixtures", ".venv"]
+# sample-data and tests/semgrep hold intentionally insecure code; fixtures are captured tool output.
+extend-exclude = ["sample-data", "tests/fixtures", "tests/semgrep", ".venv"]
 line-length = 110
 target-version = "py311"
 src = ["src", "tests"]

@@ -545,3 +545,38 @@ def test_update_db_failure_and_missing_trivy_exit_3(bin_dir: Path) -> None:
     make_fake_scanner(bin_dir, "trivy", exit_code=1, stderr="registry unreachable")
     res = invoke("update-db")
     assert res.exit_code == 3 and "download failed" in res.output
+
+
+# ---- platform guard and --version ---------------------------------------------------------------------
+
+
+def test_version_flag_prints_and_exits_zero() -> None:
+    res = invoke("--version")
+    assert res.exit_code == 0 and res.output.strip().startswith("reposcan ")
+
+
+@pytest.mark.parametrize(
+    ("platform", "supported"), [("linux", True), ("darwin", True), ("win32", False), ("cygwin", False)]
+)
+def test_platform_support_detection(platform: str, supported: bool) -> None:
+    from reposcan.cli import platform_supported
+
+    assert platform_supported(platform) is supported
+
+
+def test_unsupported_platform_fails_with_a_clear_config_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    from reposcan import cli
+
+    monkeypatch.setattr(cli, "platform_supported", lambda platform=None: False)
+    res = invoke("scan", ".")
+    assert res.exit_code == 2 and "not supported" in res.output and "Linux or macOS" in res.output
+    assert invoke("--version").exit_code == 0  # still answers --version, which is evaluated first
+
+
+def test_sarif_information_uri_points_at_this_project() -> None:
+    from reposcan.reporting.sarif import build_sarif
+
+    from .factories import finding, result
+
+    uri = build_sarif(result([finding("r")]))["runs"][0]["tool"]["driver"]["informationUri"]
+    assert uri == "https://github.com/joeabur/repo-security-scanner"
