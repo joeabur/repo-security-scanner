@@ -12,7 +12,7 @@
 # (network on first use), which is the opposite of what an isolated container is for. Base images
 # are pinned by digest (resolved 2026-10-17 through mirror.gcr.io); refresh them on a schedule.
 
-FROM golang:1.24@sha256:d2d2bc1c84f7e60d7d2438a3836ae7d0c847f4888464e7ec9ba3a1339a1ee804 AS gitleaks
+FROM golang:1.27@sha256:820153096fda4de6ac1b7194d12e416b7dd8f4e9a33d17e0345b111b945162d8 AS gitleaks
 # Gitleaks 8.30.1 needs a newer Go than the base image; the toolchain is fetched at build time only.
 ENV GOTOOLCHAIN=auto GOBIN=/out CGO_ENABLED=0
 RUN go install -ldflags "-s -w -X github.com/zricethezav/gitleaks/v8/version.Version=8.30.1" \
