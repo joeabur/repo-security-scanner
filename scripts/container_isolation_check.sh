@@ -10,10 +10,10 @@ IMAGE="${1:?usage: container_isolation_check.sh IMAGE}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT"' EXIT
-chmod 777 "$OUT"   # the container runs as an unprivileged uid
-
+# Run as the caller's own (non-root) uid: reposcan writes reports with mode 0600, so the files in
+# $OUT are then owned by, and readable to, the person who started the scan.
 ISOLATION=(--rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges
-           --user 65532:65532 --tmpfs /tmp:rw,noexec,nosuid,size=256m)
+           --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,noexec,nosuid,size=256m)
 
 echo "== 1. the container has no network"
 docker run "${ISOLATION[@]}" --entrypoint python "$IMAGE" -c "

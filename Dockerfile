@@ -4,7 +4,7 @@
 #
 #   docker build -t reposcan .
 #   docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
-#     --user 65532:65532 --tmpfs /tmp:rw,noexec,nosuid,size=256m \
+#     --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,noexec,nosuid,size=256m \
 #     -v "$PWD":/src:ro -v "$PWD/out":/out reposcan \
 #     scan /src --scanners gitleaks,semgrep --output-dir /out
 #
