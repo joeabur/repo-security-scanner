@@ -155,15 +155,16 @@ Honest list of what has **not** been verified:
 - **GitLab:** `examples/gitlab/.gitlab-ci.yml` validates against GitLab's CI schema (`gitlab-ci-local`) and its
   install command was run for real, but the pipeline itself has never run on GitLab.
 - **Release:** `release.yml` has a manual *rehearsal* mode (build, upload, download, checksum verification, no
-  publishing). It has not been run on a real `v*` tag, and no `release` environment exists yet.
+  publishing). The rehearsal passed on GitHub (run 1 on `main`); it has not been run on a real `v*` tag, and
+  no `release` environment exists yet.
 - **Branch protection** on `main` is recommended in `docs/repository-settings.md` but, when last checked,
   GitHub reported `main` as unprotected and a direct push was accepted. It has to be enabled in the
   repository settings, which this project's tooling cannot do.
 - **Platforms:** Linux x86-64 is tested everywhere; macOS (arm64, `macos-15`) runs the unit suite in CI but not
   the real-scanner integration tests. Windows is unsupported.
 - Scanner installation via release binaries / Homebrew was not exercised; `pip` and `go install` were.
-- OSV-Scanner `api` mode runs only in the weekly/manual `network-integration` workflow (the authoring sandbox
-  cannot reach `api.osv.dev`). OSV `local-db` cache age is not recorded (only Trivy's DB age is).
+- OSV-Scanner `api` mode was exercised only on GitHub (manual `network-integration` run passed; it also runs
+  weekly), because the authoring sandbox cannot reach `api.osv.dev`. OSV `local-db` cache age is not recorded (only Trivy's DB age is).
 
 Verified: every action pin matches its upstream tag (`scripts/verify_pins.py`, in CI); `--history` and
 `--image` against real repositories/images; Trivy DB age from the real tool; the unit suite on macOS and the
