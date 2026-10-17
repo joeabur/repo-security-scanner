@@ -53,6 +53,7 @@ def make_fake_scanner(
     stdout_flood: int = 0,
     sleep: float = 0.0,
     write_report: bool = True,
+    db_updated: str | None = None,
 ) -> Path:
     """Create ``bin_dir/name``: answers version queries, then writes ``report`` and exits."""
     version_text = _VERSION_TEXT[name].format(v=version or DEFAULT_VERSION[name])
@@ -63,6 +64,16 @@ def make_fake_scanner(
         args = sys.argv[1:]
         if args[:1] == [{_VERSION_ARG[name]!r}]:
             print({version_text!r})
+            sys.exit(0)
+        if args[:1] == ['version'] and {name!r} == 'trivy':
+            if args != ['version', '--format', 'json']:
+                # The real `trivy version` prints its help (exit 0) when given an unknown flag.
+                print('Print the version')
+                sys.exit(0)
+            db = {db_updated!r}
+            if db is None:
+                sys.exit(1)
+            print('{{"Version": "0.76.0", "VulnerabilityDB": {{"UpdatedAt": "' + db + '"}}}}')
             sys.exit(0)
         time.sleep({sleep!r})
         flag = {_REPORT_FLAG[name]!r}

@@ -58,3 +58,13 @@ def test_suppressions_parse(tmp_path: Path) -> None:
         )
     )
     assert cfg.suppressions[0].expires.isoformat() == "2027-01-31"  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "99999", '"week"'])
+def test_max_db_age_days_is_validated(tmp_path: Path, value: str) -> None:
+    with pytest.raises(ConfigError):
+        load_config(write(tmp_path, f"[scan]\nmax_db_age_days = {value}\n"))
+
+
+def test_max_db_age_days_accepts_a_sensible_value(tmp_path: Path) -> None:
+    assert load_config(write(tmp_path, "[scan]\nmax_db_age_days = 7\n")).scan.max_db_age_days == 7

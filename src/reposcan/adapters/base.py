@@ -10,6 +10,7 @@ import threading
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,7 @@ from ..schemas import Finding, ScannerRun, ScannerStatus, Severity
 log = logging.getLogger("reposcan.adapters")
 _SEMVER_RE = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 VERSION_TIMEOUT = 30.0
+STALE_DB_WARNING_DAYS = 7  # offline scans warn when the vulnerability database is older than this
 
 
 @dataclass
@@ -100,6 +102,7 @@ class ScannerAdapter(ABC):
     tested: str  # newest version this project's tests were run against
     ok_exit_codes: frozenset[int] = frozenset({0})
     report_filename = "report.json"
+    has_database = False  # True for scanners whose results depend on a downloaded vulnerability DB
     # Environment pinned for this tool (for example to switch off update checks and telemetry).
     extra_env: dict[str, str] = {}  # noqa: RUF012 - read-only class constant
 
@@ -115,6 +118,10 @@ class ScannerAdapter(ABC):
     def preflight(self, ctx: ScanContext) -> list[str]:
         """Raise ScannerError when the scan must not proceed; return warnings otherwise."""
         return []
+
+    def database_updated_at(self, ctx: ScanContext, exe: str) -> datetime | None:
+        """When the scanner's vulnerability DB was last updated; None if unknown. Must not raise."""
+        return None
 
     def classify_exit(self, result: CommandResult) -> str | None:
         """Return an error message when the exit code means failure, else None."""
@@ -150,6 +157,25 @@ class ScannerAdapter(ABC):
             return Version(version) in SpecifierSet(self.supported)
         except (InvalidVersion, InvalidSpecifier):
             return False
+
+    def _check_database_age(self, updated: datetime | None, ctx: ScanContext, run: ScannerRun) -> str | None:
+        """Return an error when the DB is too old (fail closed); append warnings for stale offline DBs."""
+        limit = ctx.config.scan.max_db_age_days
+        if updated is None:
+            if limit is not None:
+                return (
+                    f"could not determine the age of the {self.name} vulnerability database "
+                    f"(max_db_age_days = {limit})"
+                )
+            return None
+        age_days = (datetime.now(tz=UTC) - updated).days
+        if limit is not None and age_days > limit:
+            return (
+                f"the {self.name} vulnerability database is {age_days} days old (max_db_age_days = {limit})"
+            )
+        if ctx.offline and age_days > STALE_DB_WARNING_DAYS:
+            run.warnings.append(f"offline scan uses a vulnerability database {age_days} days old")
+        return None
 
     # ---- execution -----------------------------------------------------------------
     def run(self, ctx: ScanContext) -> AdapterOutcome:
@@ -219,6 +245,12 @@ class ScannerAdapter(ABC):
                 base.model_copy(update={"status": "failed", "error": sanitize(detail, limit=700)}),
                 [],
             )
+        if self.has_database:
+            db_updated = self.database_updated_at(ctx, exe)
+            base = base.model_copy(update={"database_updated_at": db_updated})
+            problem = self._check_database_age(db_updated, ctx, base)
+            if problem:
+                return AdapterOutcome(base.model_copy(update={"status": "failed", "error": problem}), [])
         try:
             raw = read_bounded_file(report, ctx.max_output_bytes)
         except FileNotFoundError:

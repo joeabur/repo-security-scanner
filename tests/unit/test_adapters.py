@@ -400,3 +400,73 @@ def test_trivy_directive_scan_skips_dependency_only_runs_and_images(
     deps_only = Config.model_validate({"scanners": {"trivy": {"scanners": ["vuln"]}}})
     assert TrivyAdapter().run(make_ctx(demo_repo, tmp_path, deps_only)).run.status == "ok"
     assert TrivyAdapter().run(make_ctx(demo_repo, tmp_path, image="alpine:3.20")).run.status == "ok"
+
+
+# ---- vulnerability database age (Trivy) -----------------------------------------------------------
+
+
+def _ago(days: float) -> str:
+    from datetime import UTC, datetime, timedelta
+
+    return (datetime.now(tz=UTC) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S.123456789Z")
+
+
+def _trivy(
+    bin_dir: Path,
+    tmp_path: Path,
+    repo: Path,
+    *,
+    db: str | None,
+    offline: bool = False,
+    limit: int | None = None,
+):  # type: ignore[no-untyped-def]
+    make_fake_scanner(bin_dir, "trivy", report='{"Results": []}', db_updated=db)
+    cfg = Config.model_validate({"scan": {"max_db_age_days": limit}} if limit else {})
+    ctx = make_ctx(repo, tmp_path, cfg)
+    ctx.offline = offline
+    return TrivyAdapter().run(ctx).run
+
+
+def test_trivy_database_timestamp_is_recorded_in_the_run(
+    bin_dir: Path, tmp_path: Path, demo_repo: Path
+) -> None:
+    run = _trivy(bin_dir, tmp_path, demo_repo, db=_ago(1))
+    assert run.status == "ok" and run.database_updated_at is not None
+    assert run.database_updated_at.tzinfo is not None and not run.warnings
+
+
+def test_database_older_than_the_limit_fails_closed(bin_dir: Path, tmp_path: Path, demo_repo: Path) -> None:
+    run = _trivy(bin_dir, tmp_path, demo_repo, db=_ago(30.5), limit=7)
+    assert (
+        run.status == "failed"
+        and "30 days old" in (run.error or "")
+        and "max_db_age_days = 7" in (run.error or "")
+    )
+    assert run.database_updated_at is not None  # still reported, so the operator can see how stale it was
+
+
+def test_fresh_database_within_the_limit_passes(bin_dir: Path, tmp_path: Path, demo_repo: Path) -> None:
+    assert _trivy(bin_dir, tmp_path, demo_repo, db=_ago(2), limit=7).status == "ok"
+
+
+def test_unknown_database_age_fails_only_when_a_limit_is_configured(
+    bin_dir: Path, tmp_path: Path, demo_repo: Path
+) -> None:
+    unlimited = _trivy(bin_dir, tmp_path, demo_repo, db=None)
+    assert unlimited.status == "ok" and unlimited.database_updated_at is None
+    limited = _trivy(bin_dir, tmp_path, demo_repo, db=None, limit=7)
+    assert limited.status == "failed" and "could not determine the age" in (limited.error or "")
+
+
+def test_offline_scan_on_an_old_database_warns(bin_dir: Path, tmp_path: Path, demo_repo: Path) -> None:
+    run = _trivy(bin_dir, tmp_path, demo_repo, db=_ago(30.5), offline=True)
+    assert run.status == "ok" and any("30 days old" in w for w in run.warnings)
+    online = _trivy(bin_dir, tmp_path, demo_repo, db=_ago(30.5), offline=False)
+    assert online.status == "ok" and not online.warnings  # online runs refresh the database themselves
+
+
+def test_garbage_database_metadata_is_treated_as_unknown(
+    bin_dir: Path, tmp_path: Path, demo_repo: Path
+) -> None:
+    run = _trivy(bin_dir, tmp_path, demo_repo, db="not-a-date", limit=7)
+    assert run.status == "failed" and "could not determine" in (run.error or "")

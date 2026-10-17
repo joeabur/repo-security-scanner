@@ -81,7 +81,8 @@ def render_html(result: ScanResult) -> str:
     runs = "".join(
         f"<tr><td>{_e(r.name)}</td><td>{_e(r.status)}</td><td>{_e(r.version or '-')}</td>"
         f"<td>{_e(r.supported_versions or '-')}</td><td>{_e(r.finding_count)}</td>"
-        f"<td>{_e(r.duration_seconds)}</td><td>{_e(r.error or '')}</td></tr>"
+        f"<td>{_e(r.duration_seconds)}</td><td>{_e(r.database_updated_at.isoformat() if r.database_updated_at else '-')}</td>"
+        f"<td>{_e(r.error or '')}</td></tr>"
         for r in result.scanners
     )
     sev = "".join(
@@ -113,7 +114,7 @@ violations: {_e(policy.violating_findings)}</p>
 <h2>Severity counts</h2>
 <table><thead><tr><th>Severity</th><th>All</th><th>New</th></tr></thead><tbody>{sev}</tbody></table>
 <h2>Scanners</h2>
-<table><thead><tr><th>Scanner</th><th>Status</th><th>Version</th><th>Supported</th><th>Findings</th><th>Seconds</th><th>Error</th></tr></thead><tbody>{runs}</tbody></table>
+<table><thead><tr><th>Scanner</th><th>Status</th><th>Version</th><th>Supported</th><th>Findings</th><th>Seconds</th><th>DB updated</th><th>Error</th></tr></thead><tbody>{runs}</tbody></table>
 <h2>Warnings</h2><ul>{warns}</ul>
 <h2>New findings ({len(new)})</h2>{_table(new)}
 <h2>Accepted findings: baseline and suppressions ({len(accepted)})</h2>{_table(accepted)}

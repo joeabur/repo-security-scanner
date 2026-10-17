@@ -31,6 +31,8 @@ class ScanSettings(Strict):
     version_policy: Literal["enforce", "warn"] = "enforce"
     history: bool = False
     unknown_severity: Severity = Severity.MEDIUM
+    # Fail closed (scanner failure) when the vulnerability database is older than this many days.
+    max_db_age_days: int | None = Field(default=None, ge=1, le=3650)
     env_passthrough: list[str] = Field(default_factory=list)
 
     @field_validator("env_passthrough")

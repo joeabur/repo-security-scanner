@@ -99,3 +99,5 @@ jobs:
           persist-credentials: false
       - name: Every action is pinned to a full commit SHA
         run: python3 scripts/check_workflows.py .github/workflows
+      - name: Every pinned SHA matches its upstream tag
+        run: python3 scripts/verify_pins.py .github/workflows

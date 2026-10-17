@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ..errors import ScannerError
+from ..errors import CommandError, ScannerError
 from ..paths import find_text_directives, relative_to_root
 from ..redaction import sanitize, sanitize_evidence
+from ..runner import run_command
 from ..schemas import Dependency, Finding, FindingKind, Severity, make_fingerprint
 from .base import Occurrences, ScanContext, ScannerAdapter, as_dict, as_int, as_list, as_str
 
@@ -20,6 +23,7 @@ class TrivyAdapter(ScannerAdapter):
     supported = ">=0.50,<1"
     tested = "0.76.0"
     ok_exit_codes = frozenset({0})
+    has_database = True
     # Trivy honours inline `#trivy:ignore:<id>` / `#tfsec:ignore:<id>` comments in IaC files and has no
     # switch to turn that off, so a pull request could hide its own misconfigurations with them.
     _INLINE_IGNORE = re.compile(r"(?:trivy|tfsec):ignore", re.IGNORECASE)
@@ -44,6 +48,24 @@ class TrivyAdapter(ScannerAdapter):
                 "then re-run with --allow-repo-ignore-files to accept them (a warning is recorded)."
             )
         return [f"Trivy inline ignore directives are being honoured in: {shown}"]
+
+    def database_updated_at(self, ctx: ScanContext, exe: str) -> datetime | None:
+        """Read the vulnerability DB timestamp from `trivy version --format json` (after the scan)."""
+        try:
+            result = run_command(
+                [exe, "version", "--format", "json"],
+                cwd=ctx.workdir,
+                env=self._env(ctx),
+                timeout=30,
+                max_output_bytes=65536,
+            )
+            stamp = json.loads(result.stdout)["VulnerabilityDB"]["UpdatedAt"]
+            # Trivy prints nanoseconds; datetime accepts at most microseconds.
+            trimmed = re.sub(r"(\.\d{6})\d+", r"\1", str(stamp))
+            parsed = datetime.fromisoformat(trimmed)
+        except (CommandError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return None
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
     def build_argv(self, ctx: ScanContext, exe: str, report: Path) -> list[str]:
         settings = ctx.config.scanners.trivy

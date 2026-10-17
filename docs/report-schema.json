@@ -425,6 +425,19 @@
           "title": "Command",
           "type": "array"
         },
+        "database_updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Database Updated At"
+        },
         "duration_seconds": {
           "default": 0.0,
           "title": "Duration Seconds",

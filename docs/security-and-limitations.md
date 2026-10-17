@@ -91,8 +91,10 @@ anyway (mode `0600`, short artifact retention).
 
 **Data freshness and availability**
 
-- Vulnerability databases are only as fresh as the last update. Offline scans use cached data; the report
-  does not currently record the DB age, so date your caches yourself.
+- Vulnerability databases are only as fresh as the last update. For Trivy the report records the DB's
+  `database_updated_at`, offline scans on a database older than 7 days carry a warning, and
+  `[scan] max_db_age_days` makes an older database a scanner failure (exit 3). OSV-Scanner's `local-db`
+  cache age is **not** recorded: date that cache yourself.
 - Scanner availability, versions and licences are the operator's responsibility; reposcan neither installs
   nor updates them.
 - Findings and counts in this documentation are dated snapshots.

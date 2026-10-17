@@ -293,3 +293,77 @@ def test_repo_osv_scanner_toml_cannot_hide_vulnerabilities(demo_repo: Path, tmp_
     _, data, _ = scan(demo_repo, tmp_path / "o", "--scanners", "osv-scanner", "--config", str(cfg))
     assert data is not None
     assert any(f.rule_id == "CVE-2019-10906" for f in data.findings)
+
+
+def _git(repo: Path, *args: str) -> None:
+    import subprocess
+
+    subprocess.run(
+        ["git", "-c", "user.email=t@example.com", "-c", "user.name=t", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+    )
+
+
+def test_history_mode_finds_a_secret_that_was_committed_then_deleted(tmp_path: Path) -> None:
+    need("git")
+    repo = tmp_path / "history-repo"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    (repo / "a.py").write_text("x = 1\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "one")
+    (repo / "leak.py").write_text('TOKEN = "DEMO_TOKEN_QQQQRRRRSSSSTTTTUUUUVVVV"\n')
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "add token")
+    _git(repo, "rm", "-q", "leak.py")
+    _git(repo, "commit", "-q", "-m", "remove token")
+
+    code, data, _ = scan(repo, tmp_path / "tree", "--scanners", "gitleaks")
+    assert code == 0 and data is not None and data.findings == []  # gone from the working tree
+
+    code, data, output = scan(
+        repo, tmp_path / "hist", "--scanners", "gitleaks", "--history", "--format", "json,html,md"
+    )
+    assert code == 1 and data is not None
+    assert [(f.rule_id, f.file) for f in data.findings] == [("reposcan-synthetic-token", "leak.py")]
+    assert data.scope.history_scanned and any("history scanning runs" in w for w in data.warnings)
+    assert "commit" in (data.findings[0].remediation or "").lower()
+    for blob in [output, *[p.read_text() for p in (tmp_path / "hist").iterdir()]]:
+        assert "QQQQRRRRSSSS" not in blob
+
+
+@pytest.mark.skipif(
+    not NETWORK, reason="set REPOSCAN_ITEST_NETWORK=1 (pulls an image and the vulnerability DB)"
+)
+def test_image_scan_reports_artifacts_and_valid_sarif(clean_repo: Path, tmp_path: Path) -> None:
+    need("trivy")
+    image = "mirror.gcr.io/library/alpine:3.10"
+    code, data, _ = scan(
+        clean_repo, tmp_path / "o", "--scanners", "trivy", "--image", image, "--format", "json,sarif"
+    )
+    assert code == 1 and data is not None
+    assert data.scope.trivy_image == image
+    assert data.findings and all(
+        f.file is None and f.artifact and "alpine" in f.artifact for f in data.findings
+    )
+    jsonschema.Draft7Validator(SARIF_SCHEMA).validate(
+        json.loads((tmp_path / "o" / "reposcan.sarif").read_text())
+    )
+
+
+@pytest.mark.skipif(not NETWORK, reason="set REPOSCAN_ITEST_NETWORK=1 (needs the Trivy vulnerability DB)")
+def test_trivy_database_age_is_recorded_and_enforceable(demo_repo: Path, tmp_path: Path) -> None:
+    from datetime import UTC, datetime
+
+    need("trivy")
+    code, data, _ = scan(demo_repo, tmp_path / "o", "--scanners", "trivy", "--format", "json")
+    assert code == 1 and data is not None
+    updated = data.scanners[0].database_updated_at
+    assert updated is not None, "reposcan could not read the real `trivy version --format json` output"
+    assert 0 <= (datetime.now(tz=UTC) - updated).days < 30
+
+    cfg = tmp_path / "strict.toml"
+    cfg.write_text("[scan]\nmax_db_age_days = 3650\n")
+    code, data, _ = scan(demo_repo, tmp_path / "o2", "--scanners", "trivy", "--config", str(cfg))
+    assert code == 1 and data is not None and data.scanners[0].status == "ok"  # within a ten-year limit

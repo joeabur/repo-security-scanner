@@ -27,6 +27,7 @@ with `-v` (debug logging; secrets are redacted) and open `reposcan-report.json` 
 | `.gitleaksignore` error: "the scanned repository contains a .gitleaksignore file…" | Gitleaks always honours that file, so it could hide findings. Review it. If acceptable, pass `--allow-repo-ignore-files` (a warning is recorded in the report). |
 | `semgrep rule source 'p/…' is a remote registry reference` | Use local rules, or consciously set `allow_remote_rules = true`. |
 | Trivy fails with a DB / "unable to download" message | You are offline or the registry is blocked. Run `reposcan update-db` while online, or point `TRIVY_CACHE_DIR` (via `env_passthrough`) at a warm cache. Behind a proxy, ensure `HTTPS_PROXY` and CA variables are set; reposcan passes them through. |
+| "the trivy vulnerability database is N days old (max_db_age_days = M)" | The cache is older than your limit. Run `reposcan update-db` (online) and re-scan, or raise the limit. "could not determine the age" means `trivy version --format json` showed no DB (cold cache). |
 | `--offline` Trivy scan exits 3 | Cold cache: expected and by design. Warm it first. |
 | OSV-Scanner exit 127 / "Forbidden" / `api.osv.dev` errors | The API is unreachable. Allow the host, use `mode = "local-db"`, or disable OSV. |
 | `semgrep` seems to hang on `--version` | It checks for updates online. reposcan disables that via `SEMGREP_ENABLE_VERSION_CHECK=0`; if you run Semgrep yourself offline, set the same variable. |

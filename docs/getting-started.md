@@ -12,7 +12,7 @@ severity policy, and writes JSON / HTML / SARIF reports. It does not reimplement
 
 | Need | Version | Notes |
 |---|---|---|
-| Python | 3.11 or newer | unit suite run on 3.11, 3.12 and 3.13 (324 tests each) |
+| Python | 3.11 or newer | unit suite run on 3.11, 3.12 and 3.13 (344 tests each) |
 | Gitleaks | `>=8.19,<9` (tested 8.30.1) | secrets; no network needed |
 | Semgrep | `>=1.70,<2` (tested 1.181.0) | SAST with bundled local rules; no network needed |
 | Trivy | `>=0.50,<1` (tested 0.76.0) | dependencies / IaC; **needs its vulnerability DB** (≈1.6 GB observed) |

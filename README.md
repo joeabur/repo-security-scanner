@@ -102,19 +102,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Test results
 
-Observed on 2026-10-16 on Linux x86-64 in the authoring sandbox (reposcan 0.1.0; Gitleaks 8.30.1,
+Observed on 2026-10-16/17 on Linux x86-64 in the authoring sandbox (reposcan 0.1.0; Gitleaks 8.30.1,
 Semgrep 1.181.0, Trivy 0.76.0, OSV-Scanner 2.7.0, built from source with `go install`/`pip`):
 
 | Check | Command | Result |
 |---|---|---|
-| Lint | `ruff check .` / `ruff format --check .` | all checks passed / 56 files formatted |
+| Lint | `ruff check .` / `ruff format --check .` | all checks passed / 58 files formatted |
 | Types | `mypy` (strict, Pydantic plugin) | no issues in 24 source files |
-| Unit + documentation tests | `pytest` | **324 passed** on Python 3.13, 3.12 and 3.11 each; 93 % line coverage (3.13) |
-| Integration, offline scanners | `pytest -m integration` | 15 passed, 5 skipped (network-gated) |
-| Integration, with network | `REPOSCAN_ITEST_NETWORK=1 pytest -m integration` | **20 passed** (adds Trivy, OSV-Scanner `local-db`, Trivy cold-cache failure, inline-ignore refusal) |
+| Unit + documentation tests | `pytest` | **344 passed** on Python 3.13, 3.12 and 3.11 each, and on 3.11 with the lowest allowed dependency versions; 93 % line coverage (3.13) |
+| Integration, offline scanners | `pytest -m integration` | 16 passed, 7 skipped (network-gated) |
+| Integration, with network | `REPOSCAN_ITEST_NETWORK=1 pytest -m integration` | **23 passed** (adds Trivy, OSV-Scanner `local-db`, image scan, DB-age recording, Trivy cold-cache failure, inline-ignore refusals) |
 | Report schema | `python scripts/generate_schema.py --check` | up to date |
 | Dependency audit | `pip-audit` on the locked runtime + dev dependencies | no known vulnerabilities |
-| Workflow lint | `actionlint` v1.7.12 on all four workflows; `scripts/check_workflows.py` | no problems |
+| Workflow lint | `actionlint` v1.7.12 on all three workflows; `scripts/check_workflows.py`; `scripts/verify_pins.py` | no problems; 10 of 10 action pins match their upstream tags |
+| CI on GitHub | `ci` and `security-scan` on `main` | passing (last checked on the commit before this one) |
 | Diagrams | `scripts/check_mermaid.sh` (Mermaid CLI 11.4.2 + Chromium) | all 5 diagrams render |
 | Demo | `scripts/demo.sh` | clean → exit 0, vulnerable → exit 1, scanner failure → exit 3 |
 | Walkthrough | `scripts/walkthrough.sh` | all 14 steps return the documented exit codes |
@@ -135,25 +136,32 @@ Details in [Security and limitations](docs/security-and-limitations.md). The imp
 - A clean report is evidence, not proof; coverage is whatever the scanners provide.
 - The **bundled Semgrep rules are a small, Python-only demonstration set.** Bring your own rules.
 - Redaction is pattern-based; treat reports as sensitive anyway.
-- Vulnerability data is only as fresh as the databases you updated; reports do not record DB age.
+- Vulnerability data is only as fresh as the databases you updated. Reports record when Trivy's database was
+  last updated, offline scans on an old one warn, and `[scan] max_db_age_days` can fail them closed. OSV-Scanner's
+  `local-db` cache age is not recorded.
 - POSIX only (Linux/macOS). `--history` runs `git` over repository data and needs a sandbox for untrusted
   repositories.
 
 ## Outstanding validation
 
-Honest list of what was **not** verified during development:
+Honest list of what has **not** been verified:
 
-- The GitHub Actions workflows and the GitLab pipeline were **linted** (`actionlint` 1.7.12, YAML parse, the
-  project's own hygiene checker) but **never executed** on GitHub or GitLab.
-- Action commit SHAs were resolved on 2026-10-16 from the Go module proxy's recorded tag commits because
-  GitHub was not reachable from the authoring sandbox. **Verify each SHA against the upstream tag** before relying on
-  them (Dependabot is configured to keep them current).
+- **GitLab:** `examples/gitlab/.gitlab-ci.yml` was linted and YAML-parsed but never run on GitLab.
+- **GitHub Actions:** `ci` and `security-scan` have run on GitHub and pass (private-repo SARIF upload needed
+  `actions: read`, found and fixed that way). `release.yml` has **never run**: it needs a `v*` tag and a
+  `release` environment with required reviewers, and its `download-artifact` v8 bump is untested.
+- **Branch protection** on `main` is recommended in the docs but, when last checked, GitHub reported `main` as
+  unprotected and a direct push was accepted. It has to be enabled in the repository settings.
+- **Action pins** are verified: `scripts/verify_pins.py` checks every `uses: owner/repo@sha # tag` against the
+  upstream tag with `git ls-remote` (10 of 10 matched on 2026-10-17) and runs in CI.
 - Scanner installation via release binaries / Homebrew / container images was not exercised (blocked
   download hosts); installation via `pip` and `go install` was.
 - Docker-based isolation is documented as illustrative; no Docker daemon was available.
 - Only Linux x86-64 was tested; macOS is expected to work but is unverified.
-- Container-image scanning (`--image`) and git-history scanning (`--history`) are implemented and unit
-  tested through fake executables but were not exercised against real images or repositories.
 - OSV-Scanner `api` mode could not reach `api.osv.dev` from the sandbox (observed exit 127, handled as a
   failure); `local-db` mode was run for real.
-- The release workflow, protected environments and tag protection are described, not demonstrated.
+- OSV-Scanner `local-db` cache age is not recorded (only Trivy's DB age is).
+
+Verified for real since the first release: `--history` (a secret committed then deleted is found only in
+history mode, value never printed) and `--image` (an Alpine image scanned through a registry mirror, valid
+SARIF) both have integration tests; Trivy DB age is read from the real `trivy version --format json`.

@@ -139,6 +139,8 @@ class ScannerRun(Strict):
     finding_count: int = 0
     error: str | None = None
     warnings: list[str] = Field(default_factory=list)
+    # When the scanner's vulnerability database was last updated upstream (Trivy only).
+    database_updated_at: datetime | None = None
 
     @property
     def succeeded(self) -> bool:

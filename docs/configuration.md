@@ -65,6 +65,7 @@ expires = 2027-03-31
 | `version_policy` | `"enforce"` (default) \| `"warn"` | `enforce`: a version outside the adapter's supported range is a scanner failure (exit 3). `warn`: record a warning and continue. |
 | `history` | bool, `false` | Gitleaks scans git history instead of the working tree. Same as `--history`. |
 | `unknown_severity` | `critical`…`info`, `"medium"` | Severity assigned to findings whose scanner severity is missing or unrecognised. Choose conservatively. |
+| `max_db_age_days` | int 1–3650 or unset, unset | Fail closed (scanner failure, exit 3) when Trivy's vulnerability database was last updated more than this many days ago, or when its age cannot be determined. Offline scans on a database older than 7 days warn regardless. |
 | `env_passthrough` | list of names, `[]` | Extra environment variable **names** copied to scanner processes. By default only `PATH`, `HOME`, locale/time-zone, CA-bundle and proxy variables, XDG cache dirs and `TRIVY_CACHE_DIR`/`SEMGREP_USER_HOME` are passed; CI tokens and cloud credentials never are. |
 
 ## `[policy]`

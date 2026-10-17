@@ -184,7 +184,8 @@ reposcan scan . --scanners trivy --image alpine:3.20 --output-dir /tmp/rs-image
 ```
 
 Trivy pulls the image from its registry and scans it **instead of** the filesystem. Findings carry an
-`artifact` (not a file), and SARIF locations fall back to `.`. *Illustrative; not run during authoring.*
+`artifact` (not a file), and SARIF locations fall back to `.`. *Observed* with
+`mirror.gcr.io/library/alpine:3.10` (SARIF validated against the official schema); covered by an integration test.
 
 ## Run the whole demo or walkthrough
 

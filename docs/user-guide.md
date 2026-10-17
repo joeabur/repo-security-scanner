@@ -92,6 +92,7 @@ Helper scripts (run from the repository root):
 | `scripts/cleanup.sh` | Removes generated files (`demo-output/`, `walkthrough-output/`, caches). |
 | `scripts/validate_sarif.py FILE` | Validate SARIF against the offline OASIS 2.1.0 schema. |
 | `scripts/generate_schema.py [--check]` | (Re)generate / verify `docs/report-schema.json`. |
+| `scripts/verify_pins.py DIR` | Verify each SHA-pinned action against its upstream tag (`git ls-remote`; needs network). |
 | `scripts/check_workflows.py DIR` | Verify SHA-pinned actions, explicit `permissions`, no `pull_request_target`, no expression injection. |
 | `scripts/capture_fixtures.py` | Re-capture sanitised real scanner output into `tests/fixtures/scanner-output/`. |
 
@@ -227,10 +228,13 @@ another scanner fails.
 
 - **Gitleaks and Semgrep** need no network; with `--offline` nothing changes for them.
 - **Trivy** downloads its vulnerability DB (≈1.6 GB on disk, observed) on first use and refreshes it when
-  stale. Warm the cache while online with `reposcan update-db`; then scan with `--offline`, which adds
+  stale. The report records the DB's last-update time (`database_updated_at`); offline scans on a DB older
+  than 7 days warn, and `[scan] max_db_age_days = N` fails any scan whose DB is older than N days (exit 3).
+  Warm the cache while online with `reposcan update-db`; then scan with `--offline`, which adds
   `--skip-db-update --skip-java-db-update --offline-scan --skip-check-update`. With a **cold** cache an
   offline scan fails (exit 3): *observed and covered by an integration test*, never a silent pass. Keep the
-  cache fresh: an offline scan against a months-old DB reports yesterday's knowledge as if it were today's.
+  cache fresh (or set `max_db_age_days`): an offline scan against a months-old DB reports old knowledge as
+  if it were current.
   Set `TRIVY_CACHE_DIR` via `[scan] env_passthrough` to share a cache between runs.
 - **OSV-Scanner**: see the modes above.
 - The first online Trivy run also fetches policy bundles for IaC checks; `--offline` uses the embedded set.
@@ -272,13 +276,14 @@ Ready-made definitions:
 - GitHub Actions: `.github/workflows/ci.yml` (lint, types, tests, integration, dependency audit, workflow
   hygiene), `security-scan.yml` (self-scan with SARIF upload), `release.yml` (protected release).
 - GitLab CI: `examples/gitlab/.gitlab-ci.yml` (digest-pinned image, Code Quality widget, artifacts).
-- Practices baked in: SHA-pinned actions (checked by `scripts/check_workflows.py`; SHAs resolved on
-  2026-10-16 from the Go module proxy's recorded tag commits, **please verify them against GitHub**),
+- Practices baked in: SHA-pinned actions (`scripts/check_workflows.py` requires full SHAs and
+  `scripts/verify_pins.py` checks each one against the upstream tag; both run in CI),
   `permissions: contents: read` by default, `persist-credentials: false`, `pull_request` (never
   `pull_request_target`), no secrets in scan jobs, reports written outside the source tree, locked
   dependencies (`uv.lock`), `pip-audit` on the lock, secret scanning of the project itself, and a protected
   `release` environment.
-- The workflows were validated with `actionlint` v1.7.12 but **have not been executed on GitHub or GitLab**.
+- The GitHub workflows have run on GitHub (`ci` and `security-scan` pass); `release.yml` and the GitLab
+  pipeline have **not** been executed. All were linted with `actionlint` v1.7.12.
 
 Keep CI logs clean: do not add `-v` to production jobs unless needed. Debug logs pass through the same
 redaction filter, but fewer logs means fewer places for surprises.

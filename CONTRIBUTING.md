@@ -22,6 +22,7 @@ pytest                             # unit tests + documentation checks; no netwo
 pytest -m integration              # optional: real Gitleaks + Semgrep on the bundled fixtures
 python scripts/generate_schema.py --check
 python scripts/check_workflows.py .github/workflows
+python scripts/verify_pins.py .github/workflows   # needs network: pins must match upstream tags
 ```
 
 Network-backed integration tests (Trivy, OSV-Scanner) run with `REPOSCAN_ITEST_NETWORK=1`.
