@@ -380,3 +380,33 @@ def test_osv_scanner_api_mode_finds_known_vulnerabilities(demo_repo: Path, tmp_p
     code, data, _ = scan(demo_repo, tmp_path / "o", "--scanners", "osv-scanner", "--config", str(cfg))
     assert code == 1 and data is not None and data.scanners[0].status == "ok"
     assert any(f.rule_id == "CVE-2019-10906" and f.file == "requirements.txt" for f in data.findings)
+
+
+def test_bundled_semgrep_rules_pass_their_own_tests(tmp_path: Path) -> None:
+    """Run Semgrep's own harness: every `ruleid:` must match, every `ok:` must not."""
+    import subprocess
+
+    from ..helpers import REPO_ROOT
+
+    work = tmp_path / "rules"
+    work.mkdir()
+    shutil.copy(REPO_ROOT / "src" / "reposcan" / "data" / "semgrep-rules.yml", work / "semgrep-rules.yml")
+    for fixture in (REPO_ROOT / "tests" / "semgrep").glob("semgrep-rules.*"):
+        shutil.copy(fixture, work / fixture.name)
+    run = subprocess.run(
+        ["semgrep", "--test", "--json", "--metrics", "off", "--disable-version-check", str(work)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+        env={**os.environ, "SEMGREP_ENABLE_VERSION_CHECK": "0", "SEMGREP_SEND_METRICS": "off"},
+    )
+    assert run.returncode == 0, run.stdout[-2000:] + run.stderr[-2000:]
+    results = json.loads(run.stdout)["results"]
+    checks = {rule: check for file in results.values() for rule, check in file["checks"].items()}
+    failed = [rule for rule, check in checks.items() if not check["passed"]]
+    assert not failed, failed
+    import yaml
+
+    defined = {r["id"] for r in yaml.safe_load((work / "semgrep-rules.yml").read_text())["rules"]}
+    assert defined <= set(checks), f"rules without a harness result: {sorted(defined - set(checks))}"

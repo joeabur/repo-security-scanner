@@ -1,0 +1,38 @@
+name: Bug report
+description: Something behaves incorrectly (not a security vulnerability: see SECURITY.md for those)
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste raw scanner output, reports from private repositories, or anything that could contain
+        credentials.** The JSON report is redacted by design, but check it before attaching.
+        Suspected leaks of credential values or ways to hide findings are security issues: report them privately
+        as described in `SECURITY.md`.
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and expected vs actual result
+      description: The exact `reposcan ...` command, the exit code you got, and the one you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `reposcan doctor --json`
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and Python version
+      placeholder: "Ubuntu 24.04, Python 3.13.1"
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Relevant parts of the JSON report (optional)
+      description: The `scanners` section is usually enough. Remove anything sensitive first.
+      render: json

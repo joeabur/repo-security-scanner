@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0 # full history, for the history scan below
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
@@ -52,6 +53,17 @@ jobs:
             --output-dir "${RUNNER_TEMP}/reposcan/secrets" \
             --format json,sarif,md \
             --github-annotations --github-summary
+      - name: Secret scan of the full git history (push and schedule only)
+        # Not on pull requests: `--history` runs git over repository data, which a fork controls.
+        if: ${{ always() && github.event_name != 'pull_request' }}
+        run: |
+          reposcan scan . \
+            --history \
+            --config policies/selfscan.toml \
+            --scanners gitleaks \
+            --fail-on high \
+            --output-dir "${RUNNER_TEMP}/reposcan/history" \
+            --format json,md
       - name: SAST of the package source (the demo fixtures are intentionally vulnerable)
         if: ${{ always() }}
         run: |

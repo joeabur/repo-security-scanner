@@ -89,7 +89,7 @@ def build_sarif(result: ScanResult) -> dict[str, Any]:
             )
         driver: dict[str, Any] = {
             "name": run.name,
-            "informationUri": "https://github.com/joeabur/joeabur",
+            "informationUri": "https://github.com/joeabur/repo-security-scanner",
             "rules": [rules[k] for k in sorted(rules)],
         }
         if run.version:

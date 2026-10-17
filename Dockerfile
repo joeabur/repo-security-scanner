@@ -25,6 +25,8 @@ RUN pip install "semgrep==1.181.0"
 COPY --from=gitleaks /out/gitleaks /usr/local/bin/gitleaks
 COPY . /build
 RUN pip install /build && rm -rf /build
+# A one-shot CLI, not a service: say so explicitly (also what Trivy check DS-0026 asks for).
+HEALTHCHECK NONE
 USER 65532:65532
 WORKDIR /tmp
 ENTRYPOINT ["reposcan"]
