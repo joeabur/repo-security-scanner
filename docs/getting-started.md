@@ -32,6 +32,16 @@ pip install -e ".[dev]"      # the "dev" extra adds pytest, ruff, mypy, jsonsche
 reposcan version
 ```
 
+Without cloning, install straight from a pinned commit (reposcan is **not on PyPI**, and the `reposcan` name
+there belongs to an unrelated project, so never `pip install reposcan`):
+
+```bash
+pip install "git+https://github.com/joeabur/repo-security-scanner@aa1ffbdac7674c94d6ed6fb0be98eb2c15ddc877"
+```
+
+If you installed an older checkout before the distribution was renamed to `reposcan-orchestrator`, remove the
+stale metadata once with `pip uninstall reposcan` and reinstall.
+
 For a reproducible install from the lockfile use `uv`:
 
 ```bash

@@ -36,6 +36,7 @@ GUIDES = [
     "security-and-limitations.md",
     "examples.md",
     "threat-model.md",
+    "repository-settings.md",
 ]
 FENCE_RE = re.compile(r"^```(?P<lang>[\w+-]*)[^\n]*\n(?P<body>.*?)^```", re.S | re.M)
 LINK_RE = re.compile(r"(?<!\!)\[[^\]]*\]\((?P<target>[^)\s]+)\)")
@@ -417,3 +418,32 @@ def test_scanner_version_tables_match_adapters() -> None:
 def test_scan_result_schema_roundtrip_of_sample_report() -> None:
     sample = result([finding("r")])
     assert ScanResult.model_validate_json(sample.model_dump_json()) == sample
+
+
+def test_no_install_command_pulls_the_unrelated_pypi_package() -> None:
+    """A different project owns the name `reposcan` on PyPI: never install it by bare name."""
+    import tomllib
+
+    assert tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())["project"]["name"] != "reposcan"
+    pattern = re.compile(r"pip install\s+[\"']?reposcan(?:==|[\"'\s]|$)|[\"']reposcan==")
+    skipped = {".git", ".venv", "uv.lock"}
+    offenders = []
+    for path in REPO_ROOT.rglob("*"):
+        if not path.is_file() or skipped & set(path.parts) or path.suffix in {".json", ".pyc", ".svg"}:
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            continue
+        for number, line in enumerate(lines, start=1):
+            if pattern.search(line) and "never" not in line.lower() and path.name != "test_docs.py":
+                offenders.append(f"{path.relative_to(REPO_ROOT)}:{number}")
+    assert not offenders, offenders
+
+
+def test_documented_git_installs_are_pinned_to_a_commit_or_tag() -> None:
+    pattern = re.compile(r"git\+https://github\.com/joeabur/repo-security-scanner(@\S+)?")
+    for path in [*DOC_FILES, REPO_ROOT / "examples" / "gitlab" / ".gitlab-ci.yml"]:
+        for match in pattern.finditer(path.read_text(encoding="utf-8")):
+            ref = (match.group(1) or "").strip("\"'")
+            assert ref and ref != "@main", f"{path.name}: unpinned install {match.group(0)}"

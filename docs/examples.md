@@ -97,7 +97,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: |
-          pip install "reposcan==0.1.0" "semgrep==1.181.0"
+          pip install "git+https://github.com/joeabur/repo-security-scanner@aa1ffbdac7674c94d6ed6fb0be98eb2c15ddc877" "semgrep==1.181.0"
           GOBIN="${RUNNER_TEMP}/bin" go install \
             -ldflags "-X github.com/zricethezav/gitleaks/v8/version.Version=8.30.1" \
             github.com/zricethezav/gitleaks/v8@v8.30.1
@@ -113,8 +113,9 @@ jobs:
           sarif_file: ${{ runner.temp }}/reposcan/reposcan.sarif
 ```
 
-(`reposcan==0.1.0` assumes you publish the package to your index; otherwise install from a pinned
-checkout: `pip install ./repo-security-scanner`.)
+reposcan is **not published to PyPI**, and an unrelated package called `reposcan` already exists there
+(see [Name collision](security-and-limitations.md#name-collision-on-pypi)): never `pip install reposcan`.
+Install from a commit SHA or release tag as above, and bump the SHA when you upgrade.
 
 ### Baseline from the base branch
 
@@ -142,7 +143,7 @@ Also protect `ci/` with CODEOWNERS and require the check in branch protection.
 reposcan:
   stage: security
   script:
-    - pip install "reposcan==0.1.0" "semgrep==1.181.0"
+    - pip install "git+https://github.com/joeabur/repo-security-scanner@aa1ffbdac7674c94d6ed6fb0be98eb2c15ddc877" "semgrep==1.181.0"
     - reposcan scan . --config ci/reposcan.toml --baseline ci/reposcan-baseline.json
         --scanners gitleaks,semgrep --fail-on high --output-dir reposcan-output
         --format json,sarif,md,codequality

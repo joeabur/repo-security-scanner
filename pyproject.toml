@@ -3,7 +3,7 @@ requires = ["hatchling==1.32.4"]
 build-backend = "hatchling.build"
 
 [project]
-name = "reposcan"
+name = "reposcan-orchestrator"
 version = "0.1.0"
 description = "Security scanner orchestrator: Gitleaks, Semgrep, Trivy and OSV-Scanner with unified findings, baselines and CI policies."
 readme = "README.md"

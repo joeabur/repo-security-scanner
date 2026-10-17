@@ -47,6 +47,39 @@ jobs:
       - name: Unit tests, documentation checks and coverage
         run: uv run --frozen pytest --cov=reposcan --cov-report=term-missing --cov-fail-under=85
 
+  unit-macos:
+    # The tool targets POSIX; this proves the unit suite (process groups, O_NOFOLLOW, atomic writes,
+    # path handling) also passes on macOS. Scanners are not needed: the tests use fake executables.
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install dependencies from the lockfile
+        run: |
+          python -m pip install "uv==${UV_VERSION}"
+          uv sync --frozen --extra dev
+      - name: Unit tests and documentation checks
+        run: uv run --frozen pytest
+
+  container-isolation:
+    # Builds the project Dockerfile and runs the documented isolation recipe: no network, read-only
+    # root filesystem, dropped capabilities, non-root user, read-only source mount.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the image
+        run: docker build -t reposcan:ci .
+      - name: Scan the demo repository with no network
+        run: bash scripts/container_isolation_check.sh reposcan:ci
+
   integration:
     # Real Gitleaks + Semgrep against the bundled intentionally vulnerable fixtures. No network is
     # needed by the tests themselves; the scanners are installed at the exact tested versions.
