@@ -151,22 +151,19 @@ Details in [Security and limitations](docs/security-and-limitations.md). The imp
 
 Honest list of what has **not** been verified:
 
-- **GitLab:** `examples/gitlab/.gitlab-ci.yml` was linted and YAML-parsed but never run on GitLab.
-- **GitHub Actions:** `ci` and `security-scan` have run on GitHub and pass (private-repo SARIF upload needed
-  `actions: read`, found and fixed that way). `release.yml` has **never run**: it needs a `v*` tag and a
-  `release` environment with required reviewers, and its `download-artifact` v8 bump is untested.
-- **Branch protection** on `main` is recommended in the docs but, when last checked, GitHub reported `main` as
-  unprotected and a direct push was accepted. It has to be enabled in the repository settings.
-- **Action pins** are verified: `scripts/verify_pins.py` checks every `uses: owner/repo@sha # tag` against the
-  upstream tag with `git ls-remote` (10 of 10 matched on 2026-10-17) and runs in CI.
-- Scanner installation via release binaries / Homebrew / container images was not exercised (blocked
-  download hosts); installation via `pip` and `go install` was.
-- Docker-based isolation is documented as illustrative; no Docker daemon was available.
-- Only Linux x86-64 was tested; macOS is expected to work but is unverified.
-- OSV-Scanner `api` mode could not reach `api.osv.dev` from the sandbox (observed exit 127, handled as a
-  failure); `local-db` mode was run for real.
-- OSV-Scanner `local-db` cache age is not recorded (only Trivy's DB age is).
+- **GitLab:** `examples/gitlab/.gitlab-ci.yml` validates against GitLab's CI schema (`gitlab-ci-local`) and its
+  install command was run for real, but the pipeline itself has never run on GitLab.
+- **Release:** `release.yml` has a manual *rehearsal* mode (build, upload, download, checksum verification, no
+  publishing). It has not been run on a real `v*` tag, and no `release` environment exists yet.
+- **Branch protection** on `main` is recommended in `docs/repository-settings.md` but, when last checked,
+  GitHub reported `main` as unprotected and a direct push was accepted. It has to be enabled in the
+  repository settings, which this project's tooling cannot do.
+- **Platforms:** Linux x86-64 is tested everywhere; macOS (arm64, `macos-15`) runs the unit suite in CI but not
+  the real-scanner integration tests. Windows is unsupported.
+- Scanner installation via release binaries / Homebrew was not exercised; `pip` and `go install` were.
+- OSV-Scanner `api` mode runs only in the weekly/manual `network-integration` workflow (the authoring sandbox
+  cannot reach `api.osv.dev`). OSV `local-db` cache age is not recorded (only Trivy's DB age is).
 
-Verified for real since the first release: `--history` (a secret committed then deleted is found only in
-history mode, value never printed) and `--image` (an Alpine image scanned through a registry mirror, valid
-SARIF) both have integration tests; Trivy DB age is read from the real `trivy version --format json`.
+Verified: every action pin matches its upstream tag (`scripts/verify_pins.py`, in CI); `--history` and
+`--image` against real repositories/images; Trivy DB age from the real tool; the unit suite on macOS and the
+Docker isolation recipe (`--network none`, read-only root, non-root, dropped capabilities) on GitHub-hosted runners.

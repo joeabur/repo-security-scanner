@@ -45,13 +45,21 @@ heaviest:
    ```
    It proves the default scanners do not need or use the network and stops exfiltration by a compromised
    parser. Trivy/OSV-Scanner need their databases pre-warmed and `--offline`.
-2. **Container** with no network, a read-only bind mount of the repository, a writable `/out`, non-root user,
-   dropped capabilities. *Illustrative, not run here (no Docker daemon in the authoring sandbox):*
+2. **Container** (`Dockerfile` in this repository): no network, read-only root filesystem, dropped
+   capabilities, non-root user, read-only source mount. It contains reposcan, Gitleaks and Semgrep only; Trivy
+   and OSV-Scanner are left out on purpose because they need their databases (network on first use). Base
+   images are pinned by digest.
    ```bash
+   docker build -t reposcan .
    docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
-     --user 65534:65534 --tmpfs /tmp -v "$PWD":/src:ro -v "$PWD/out":/out your-image-with-reposcan \
-     reposcan scan /src --scanners gitleaks,semgrep --output-dir /out
+     --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,noexec,nosuid,size=256m \
+     -v "$PWD":/src:ro -v "$PWD/out":/out reposcan \
+     scan /src --scanners gitleaks,semgrep --output-dir /out
    ```
+   CI runs exactly this recipe on every push (`container-isolation` job, `scripts/container_isolation_check.sh`):
+   it proves the container cannot open a connection, that the scan still finds the 6 expected findings in the
+   demo repository, and that no secret value reaches the report. Run the container as your own uid
+   (`--user "$(id -u):$(id -g)"`) so the `0600` report files in `out/` belong to you.
 3. **Ephemeral CI runner / VM** per untrusted job, without secrets, with `contents: read` only.
 
 reposcan itself does not build images or wrap containers: a half-tested sandbox would be worse than none.
