@@ -1,0 +1,51 @@
+# Integration tests that need the network and ALL four scanners: Trivy's vulnerability database,
+# OSV-Scanner in both modes (including `api`, which sends package names/versions to api.osv.dev),
+# container-image scanning and the cold-cache failure path. Runs weekly (new advisories, new scanner
+# releases) and on demand; it is slower than `ci` because Trivy is built from source.
+name: network-integration
+
+on:
+  schedule:
+    - cron: "41 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: network-integration
+  cancel-in-progress: false
+
+jobs:
+  all-scanners:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install reposcan and the four pinned scanners
+        env:
+          GOBIN: ${{ runner.temp }}/bin
+          GOTOOLCHAIN: auto
+        run: |
+          python -m pip install "uv==0.11.32"
+          uv sync --frozen --extra dev
+          uv pip install "semgrep==1.181.0"
+          go install -ldflags "-X github.com/zricethezav/gitleaks/v8/version.Version=8.30.1" \
+            github.com/zricethezav/gitleaks/v8@v8.30.1
+          go install -ldflags "-X github.com/aquasecurity/trivy/pkg/version/app.ver=0.76.0" \
+            github.com/aquasecurity/trivy/cmd/trivy@v0.76.0
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.0
+          echo "${GOBIN}" >> "${GITHUB_PATH}"
+          echo "${PWD}/.venv/bin" >> "${GITHUB_PATH}"
+      - name: Scanner versions
+        run: reposcan doctor --all
+      - name: Integration tests (network, all scanners)
+        env:
+          REPOSCAN_ITEST_NETWORK: "1"
+          REPOSCAN_ITEST_OSV_API: "1"
+        run: uv run --frozen pytest -m integration -v

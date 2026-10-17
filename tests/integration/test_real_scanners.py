@@ -367,3 +367,16 @@ def test_trivy_database_age_is_recorded_and_enforceable(demo_repo: Path, tmp_pat
     cfg.write_text("[scan]\nmax_db_age_days = 3650\n")
     code, data, _ = scan(demo_repo, tmp_path / "o2", "--scanners", "trivy", "--config", str(cfg))
     assert code == 1 and data is not None and data.scanners[0].status == "ok"  # within a ten-year limit
+
+
+@pytest.mark.skipif(
+    os.environ.get("REPOSCAN_ITEST_OSV_API") != "1",
+    reason="set REPOSCAN_ITEST_OSV_API=1 (needs api.osv.dev; sends package names/versions to Google's OSV service)",
+)
+def test_osv_scanner_api_mode_finds_known_vulnerabilities(demo_repo: Path, tmp_path: Path) -> None:
+    need("osv-scanner")
+    cfg = tmp_path / "c.toml"
+    cfg.write_text('[scanners.osv]\nenabled = true\nmode = "api"\n')
+    code, data, _ = scan(demo_repo, tmp_path / "o", "--scanners", "osv-scanner", "--config", str(cfg))
+    assert code == 1 and data is not None and data.scanners[0].status == "ok"
+    assert any(f.rule_id == "CVE-2019-10906" and f.file == "requirements.txt" for f in data.findings)

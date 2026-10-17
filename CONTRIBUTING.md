@@ -51,10 +51,10 @@ the adapter's `supported` range and update `tested`.
 
 ## Branch protection
 
-`main` is protected: changes land through pull requests, the CI checks (`lint-and-test`, `integration`,
-`dependency-audit`, `workflow-hygiene` and `secrets-and-sast`) must pass, force-pushes and branch deletion are
-blocked, and `.github/CODEOWNERS` names the reviewers for security-critical paths. Do not rewrite `main`'s
-history.
+`main` is meant to be protected: changes land through pull requests, the CI checks must pass, force-pushes
+and branch deletion are blocked, and `.github/CODEOWNERS` names the reviewers for security-critical paths.
+These are repository settings, not files, so they only apply once an admin has enabled them: see
+[docs/repository-settings.md](docs/repository-settings.md). Do not rewrite `main`'s history.
 
 ## Commit and review
 

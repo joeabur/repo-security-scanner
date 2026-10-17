@@ -22,13 +22,14 @@ workflow:
 
 variables:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  REPOSCAN_VERSION: "0.1.0"
+  # reposcan is NOT on PyPI (an unrelated package called "reposcan" is); install from a pinned commit or tag.
+  REPOSCAN_REF: "aa1ffbdac7674c94d6ed6fb0be98eb2c15ddc877"
   SEMGREP_VERSION: "1.181.0"
   GITLEAKS_VERSION: "8.30.1"
 
 .install-scanners: &install-scanners
   - apt-get update -qq && apt-get install -y -qq --no-install-recommends git golang-go ca-certificates
-  - pip install "reposcan==${REPOSCAN_VERSION}" "semgrep==${SEMGREP_VERSION}"
+  - pip install "git+https://github.com/joeabur/repo-security-scanner@${REPOSCAN_REF}" "semgrep==${SEMGREP_VERSION}"
   - |
     GOBIN=/usr/local/bin GOTOOLCHAIN=auto go install \
       -ldflags "-X github.com/zricethezav/gitleaks/v8/version.Version=${GITLEAKS_VERSION}" \

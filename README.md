@@ -28,6 +28,10 @@ from the scanners' own sources/metadata on 2026-10-16. reposcan does not bundle 
 - **New vs accepted.** Baselines and suppressions carry owner, reason and optional expiry; they stay
   visible; expired ones turn back into new findings.
 
+> **Not on PyPI.** An unrelated package called `reposcan` exists there; do not `pip install reposcan`. Install
+> from this repository (see [Getting started](docs/getting-started.md) and
+> [Name collision](docs/security-and-limitations.md#name-collision-on-pypi)).
+
 ## Quick start
 
 ```bash
@@ -53,6 +57,7 @@ scripts/cleanup.sh
 | [User guide](docs/user-guide.md) | Command reference, orchestration and CI diagrams, scanners, baselines, policy, exit codes, offline use, upgrading |
 | [Configuration reference](docs/configuration.md) | Every TOML key, defaults, presets |
 | [Troubleshooting](docs/troubleshooting.md) | Symptoms and fixes by exit code |
+| [Repository settings](docs/repository-settings.md) | Branch ruleset, required checks, release environment and security features that must be enabled in GitHub (not stored in the repo) |
 | [Security and limitations](docs/security-and-limitations.md) | Controls and where they are tested, baseline risks, isolation options, known limits |
 | [Examples](docs/examples.md) | Configs, GitHub Actions, GitLab CI, scripting, containers |
 | [Threat model](docs/threat-model.md) | Assets, actors, trust boundaries, threats and mitigations |

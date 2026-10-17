@@ -56,6 +56,19 @@ heaviest:
 
 reposcan itself does not build images or wrap containers: a half-tested sandbox would be worse than none.
 
+## Name collision on PyPI
+
+An **unrelated** project named `reposcan` ("GitHub repository analytics from your terminal", version 0.1.0,
+uploaded 2026-05-11) already exists on PyPI, and so does an unrelated `repo-security-scanner`. This project is
+therefore **not published to PyPI**, and its distribution is named `reposcan-orchestrator`. Consequences:
+
+- **Never `pip install reposcan`.** That fetches someone else's code, which even has the same import package
+  and console command name. Install from a pinned Git commit or tag:
+  `pip install "git+https://github.com/joeabur/repo-security-scanner@<commit-or-tag>"`.
+- Do not install both side by side in one environment; they would overwrite each other's `reposcan` module and
+  command. A test (`tests/unit/test_docs.py`) fails if any documented or CI install command pulls the bare name.
+- If you ever publish this project, choose a name that is free at that moment and update `pyproject.toml`.
+
 ## Baseline risks
 
 - **A baseline is an allow-list.** Anyone who can edit it can hide a finding. Protect it with CODEOWNERS and

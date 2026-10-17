@@ -64,6 +64,7 @@ flowchart LR
 | T11 | Baseline / suppression abuse | Owner + reason mandatory, expiry rules, visibility in reports, review/stale tooling, CODEOWNERS and base-branch baseline guidance | Social engineering of reviewers |
 | T12 | Tampered or stale vulnerability data | Operator-controlled sources; offline mode fails on cold cache | Registry compromise or stale cache not detected by reposcan |
 | T13 | Supply chain of reposcan and CI | Locked dependencies, `pip-audit`, SHA-pinned actions, `permissions: contents: read`, protected `release` environment, `persist-credentials: false` | A compromised upstream action tag; pins are verified against upstream tags by `scripts/verify_pins.py` but a tag can be moved later |
+| T13b | Dependency confusion: a stranger's PyPI package named `reposcan` is installed instead of this tool | Distribution renamed to `reposcan-orchestrator`; not published; every documented install is a commit-pinned `git+https://` URL; a test rejects `pip install reposcan` | Users who type the bare name anyway |
 | T14 | CI privilege escalation via untrusted PRs | `pull_request` (not `_target`), no secrets in scan jobs, SARIF upload skipped for forks | Misconfiguration downstream of the examples |
 | T15 | Crash masquerading as a policy result | Dedicated exit code 4 for internal errors; 3 for scanners; 1 only for completed policy failures | — |
 

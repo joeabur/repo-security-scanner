@@ -1,10 +1,15 @@
 # Protected release: build is unprivileged; publishing needs the `release` environment, which
 # must be configured with required reviewers and a tag-protection rule for v* tags.
+#
+# Rehearsal: "Run workflow" (workflow_dispatch) on any branch runs the same build, uploads the
+# artifact, downloads it again and verifies its checksums, but never publishes. Use it to check
+# the pipeline (including action upgrades) without cutting a tag.
 name: release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,6 +26,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Verify the tag matches the package version
+        if: ${{ github.ref_type == 'tag' }}
         run: |
           python - <<'PY'
           import os, tomllib
@@ -41,7 +47,26 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+  rehearsal:
+    # workflow_dispatch only: proves the artifact round-trips and the checksums verify. Publishes nothing.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+      - name: Verify checksums and contents
+        run: |
+          cd dist
+          sha256sum --check SHA256SUMS
+          ls -l
+          test "$(ls -1 *.whl | wc -l)" -eq 1 && test "$(ls -1 *.tar.gz | wc -l)" -eq 1
+
   publish:
+    if: ${{ github.ref_type == 'tag' }}
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -53,6 +78,8 @@ jobs:
         with:
           name: dist
           path: dist
+      - name: Verify checksums before publishing
+        run: (cd dist && sha256sum --check SHA256SUMS)
       - name: Create the release (assets are checksummed)
         env:
           GH_TOKEN: ${{ github.token }}
