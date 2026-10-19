@@ -3,6 +3,7 @@
 Every weakness below is deliberate so that the scanners have something to find.
 """
 import hashlib
+import re
 import sqlite3
 import subprocess
 
@@ -15,6 +16,8 @@ def find_user(conn: sqlite3.Connection, username: str):
 
 def ping(host: str) -> int:
     # Command injection: shell=True with user-controlled input (CWE-78).
+    if not re.match(r'^[a-zA-Z0-9_\-./\\]+$', host):
+        raise ValueError("Invalid host")
     return subprocess.call("ping -c 1 " + host, shell=True)
 
 
