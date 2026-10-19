@@ -9,8 +9,8 @@ import subprocess
 
 def find_user(conn: sqlite3.Connection, username: str):
     # SQL injection: user input concatenated into the query (CWE-89).
-    query = "SELECT id, name FROM users WHERE name = '" + username + "'"
-    return conn.execute(query).fetchall()
+    query = "SELECT id, name FROM users WHERE name = ?"
+    return conn.execute(query, (username,)).fetchall()
 
 
 def ping(host: str) -> int:
