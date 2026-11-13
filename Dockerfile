@@ -18,7 +18,7 @@ ENV GOTOOLCHAIN=auto GOBIN=/out CGO_ENABLED=0
 RUN go install -ldflags "-s -w -X github.com/zricethezav/gitleaks/v8/version.Version=8.30.1" \
     github.com/zricethezav/gitleaks/v8@v8.30.1
 
-FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PYTHONDONTWRITEBYTECODE=1 \
     HOME=/tmp SEMGREP_ENABLE_VERSION_CHECK=0 SEMGREP_SEND_METRICS=off
 RUN pip install "semgrep==1.181.0"
